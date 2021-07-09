@@ -1,34 +1,105 @@
 package main
 
 import (
-	"strings"
+	"fmt"
+	"os"
 
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 )
 
-func main() {
-	var inTE, outTE *walk.TextEdit // 声明两个文本编辑控件
+type MyMainWin struct {
+	*walk.MainWindow                // 窗口
+	txtPathTE        *walk.LineEdit // txt文件的路径
+	dataProj         []*string      // 数据项目的列表
 
+}
+
+// 打开数据文件，选择文件
+func (mw *MyMainWin) selectFile() {
+	dlg := new(walk.FileDialog)
+	dlg.Title = "选择数据文件"
+	dlg.Filter = "文本文件(*.txt)|*.txt"
+
+	mw.txtPathTE.SetText("")
+	if ok, err := dlg.ShowOpen(mw); err != nil {
+		mw.txtPathTE.SetText("选择文件过程出错，请联系老头！\r\n")
+		return
+	} else if !ok {
+		mw.txtPathTE.SetText("未选择文件\r\n")
+		return
+	}
+	s := fmt.Sprintf(" %s\r\n", dlg.FilePath)
+	mw.txtPathTE.SetText(s)
+
+}
+
+func main() {
 	//主窗口对象
-	MainWindow{
-		Title:   "Eiko利刃",       // 窗口标题设置
-		MinSize: Size{600, 400}, //窗体的大小
-		Layout:  VBox{},         // 窗体的布局形式
-		//定义vbox的所有控件
-		Children: []Widget{ //定义控件
-			HSplitter{ //水平分割控件
-				Children: []Widget{ //定义子控件
-					TextEdit{AssignTo: &inTE},
-					TextEdit{AssignTo: &outTE, ReadOnly: true},
-				},
-			},
-			PushButton{ //按钮控件
-				Text: "确定",
-				OnClicked: func() {
-					outTE.SetText(strings.ToUpper(inTE.Text()))
+	mw := MyMainWin{}
+
+	err := MainWindow{
+		Accessibility:    Accessibility{},
+		Background:       nil,
+		ContextMenuItems: []MenuItem{},
+		DoubleBuffering:  false,
+		Enabled:          nil,
+		Font:             Font{},
+		MaxSize:          Size{},
+		MinSize:          Size{Width: 600, Height: 400},
+		Name:             "",
+		OnBoundsChanged: func() {
+		},
+		OnKeyDown: func(key walk.Key) {
+		},
+		OnKeyPress: func(key walk.Key) {
+		},
+		OnKeyUp: func(key walk.Key) {
+		},
+		OnMouseDown: func(x int, y int, button walk.MouseButton) {
+		},
+		OnMouseMove: func(x int, y int, button walk.MouseButton) {
+		},
+		OnMouseUp: func(x int, y int, button walk.MouseButton) {
+		},
+		OnSizeChanged: func() {
+		},
+		Persistent:         false,
+		RightToLeftLayout:  false,
+		RightToLeftReading: false,
+		ToolTipText:        nil,
+		Visible:            nil,
+		Children: []Widget{
+			GroupBox{
+				Layout: HBox{},
+				Title:  "导入数据",
+				Font:   Font{PointSize: 10},
+				Children: []Widget{
+					Label{Text: "数据文件:", Font: Font{PointSize: 10}},
+					LineEdit{AssignTo: &mw.txtPathTE},
+					PushButton{Text: "浏览", OnClicked: mw.selectFile},
+					PushButton{Text: "导入"},
 				},
 			},
 		},
-	}.Run()
+		DataBinder: DataBinder{},
+		Layout:     VBox{},
+		Icon:       nil,
+		Size:       Size{},
+		Title:      "Eiko的工具箱",
+		AssignTo:   &mw.MainWindow,
+		Bounds:     Rectangle{},
+		MenuItems:  []MenuItem{},
+		OnDropFiles: func([]string) {
+		},
+		StatusBarItems:    []StatusBarItem{},
+		SuspendedUntilRun: false,
+		ToolBar:           ToolBar{},
+		ToolBarItems:      []MenuItem{},
+	}.Create()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	mw.Run()
 }
