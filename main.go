@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/360EntSecGroup-Skylar/excelize/v2"
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 )
@@ -74,10 +75,10 @@ func (mw *MyMainWin) selectFile() {
 //定义项目的单击行为
 func (mw *MyMainWin) doCurrentIndexChanged() {
 	i := mw.projLsBox.CurrentIndex()
-	item := &mw.projModel.items[i]
-
+	item := mw.projModel.items[i]
 	fmt.Println("CurrentIndex: ", i)
 	fmt.Println("CurrentEnvVarName: ", item)
+	mw.proj = item
 }
 
 // 定义项目的双击行为
@@ -103,9 +104,9 @@ func (mw *MyMainWin) doDropFiles(filepath []string) {
 	mw.txtPathTE.SetText(filepath[0])
 }
 
-func (mw *MyMainWin) loadK4840Data(path string, infunc func(*csv.Reader)) func() {
-	return func() {
-		fs, err := os.OpenFile(strings.TrimSpace(path), os.O_RDONLY, 4)
+func (mw *MyMainWin) loadK4840Data(infunc func(*csv.Reader)) func() {
+	f := func() {
+		fs, err := os.OpenFile(strings.TrimSpace(mw.txtPathTE.Text()), os.O_RDONLY, 4)
 		if err != nil {
 			mw.doPrompt(fmt.Sprintf("打不开这个文件喔, 错误信息是：\n\r%+v", err))
 			return
@@ -116,31 +117,24 @@ func (mw *MyMainWin) loadK4840Data(path string, infunc func(*csv.Reader)) func()
 		reader.FieldsPerRecord = 13
 		infunc(reader)
 	}
+	return f
 }
 
 func (mw *MyMainWin) doLoadprojs(reader *csv.Reader) {
-	mw.doPrompt(mw.txtPathTE.Text())
 	pS := projSet{m: map[string]interface{}{}}
-	mw.doPrompt(fmt.Sprintln(pS))
 	for {
 		row, err := reader.Read()
-		mw.doPrompt(fmt.Sprintln(row))
-		mw.doPrompt(fmt.Sprintln(err))
 		if err != nil && err != io.EOF {
 			continue
 		}
 		if err == io.EOF {
 			break
 		}
-		mw.doPrompt(fmt.Sprintln(row))
 		pS.Add(row[0])
 	}
-	mw.doPrompt("循环完了.")
 	// 清空列表中原来的数据，并把现在加载到的数据加进去
 	mw.projModel.items = pS.ToStrings()
-	mw.doPrompt("pS.ToStrings done.")
 	mw.projModel.PublishItemsReset()
-	mw.doPrompt("Refresh ListBox done.")
 	mw.dataPath = mw.txtPathTE.Text()
 }
 
@@ -164,7 +158,22 @@ func (mw *MyMainWin) doExportDupData(reader *csv.Reader) {
 			}
 		}
 	}
-	fmt.Println(data)
+	xlsfile := excelize.NewFile()
+	xlsfile.SetActiveSheet(xlsfile.NewSheet(mw.proj))
+	pos_line := 'A'
+	pos_col := 1
+	for item := range data {
+		if len(data[item]) <= 1 {
+			continue
+		}
+		for i := range data[item] {
+			xlsfile.SetCellValue(mw.proj, fmt.Sprintf("%d1", pos_line), item)
+			for element := range i {
+
+			}
+		}
+	}
+
 }
 
 func main() {
@@ -189,7 +198,7 @@ func main() {
 					Label{Text: "文件:", Font: Font{PointSize: 10}},
 					LineEdit{AssignTo: &mw.txtPathTE},
 					PushButton{Text: "浏览", OnClicked: mw.selectFile},
-					PushButton{Text: "加载数据", OnClicked: mw.loadK4840Data(mw.txtPathTE.Text(), mw.doLoadprojs)},
+					PushButton{Text: "加载数据", OnClicked: mw.loadK4840Data(mw.doLoadprojs)},
 				},
 			},
 			GroupBox{
@@ -205,7 +214,7 @@ func main() {
 								OnCurrentIndexChanged: mw.doCurrentIndexChanged,
 								OnItemActivated:       mw.doItemActivated,
 							},
-							PushButton{Text: "导出多次实验的数据", OnClicked: mw.loadK4840Data(mw.txtPathTE.Text(), mw.doExportDupData)},
+							PushButton{Text: "导出多次实验的数据", OnClicked: mw.loadK4840Data(mw.doExportDupData)},
 						},
 					},
 				},
@@ -213,5 +222,17 @@ func main() {
 		},
 	}.Run()); err != nil {
 		log.Fatal(err)
+	}
+	f := excelize.NewFile()
+	// Create a new sheet.
+	index := f.NewSheet("Sheet2")
+	// Set value of a cell.
+	f.SetCellValue("Sheet2", "A2", "Hello world.")
+	f.SetCellValue("Sheet1", "B2", 100)
+	// Set active sheet of the workbook.
+	f.SetActiveSheet(index)
+	// Save spreadsheet by the given path.
+	if err := f.SaveAs(`C:\Users\blackfat\Book1.xlsx`); err != nil {
+		fmt.Println(err)
 	}
 }
