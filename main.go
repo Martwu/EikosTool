@@ -150,7 +150,9 @@ func (mw *MyMainWin) doExportDupData(reader *csv.Reader) {
 		if err == io.EOF {
 			break
 		}
+		// row[0]为数据所属的项目
 		if row[0] == mw.proj {
+			// row[1]为实验对象
 			if len(data[row[1]]) == 0 {
 				data[row[1]] = []([]string){row[2:12]}
 			} else {
@@ -160,19 +162,34 @@ func (mw *MyMainWin) doExportDupData(reader *csv.Reader) {
 	}
 	xlsfile := excelize.NewFile()
 	xlsfile.SetActiveSheet(xlsfile.NewSheet(mw.proj))
-	pos_line := 'A'
-	pos_col := 1
+	posLine := 0
+	POSCOL := 'A'
 	for item := range data {
+		// 不重复的实验数据不展示
 		if len(data[item]) <= 1 {
 			continue
 		}
-		for i := range data[item] {
-			xlsfile.SetCellValue(mw.proj, fmt.Sprintf("%d1", pos_line), item)
-			for element := range i {
-
+		// 重复的数据逐行展示
+		// 遍历同一个项目中的若干行数据
+		for eachline := range data[item] {
+			// 从第一行开始
+			posLine += 1
+			// 遍历一行的若干列
+			pos := fmt.Sprintf("A%d", posLine)
+			fmt.Println(pos, " -- ", item)
+			xlsfile.SetCellValue(mw.proj, pos, item)
+			for i := range data[item][eachline] {
+				// 每一行逐个元素
+				pos = fmt.Sprintf("%s%d", string(POSCOL+rune(i+1)), posLine)
+				fmt.Println(pos, " -- ", data[item][eachline][i])
+				xlsfile.SetCellValue(mw.proj, pos, data[item][eachline][i])
 			}
 		}
 	}
+	if err := xlsfile.SaveAs(`C:\Users\blackfat\Downloads\Book1.xlsx`); err != nil {
+		fmt.Println(err)
+	}
+	mw.doPrompt("excel数据导出来啦！")
 
 }
 
